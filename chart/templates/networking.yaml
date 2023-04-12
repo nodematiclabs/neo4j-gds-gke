@@ -1,0 +1,62 @@
+---
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: neo4j
+spec:
+  domains:
+  - {{ .Values.networking.browser.domain }}
+  - {{ .Values.networking.bolt.domain }}
+---
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: neo4j
+spec:
+  redirectToHttps:
+    enabled: true
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: neo4j
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: neo4j
+    networking.gke.io/managed-certificates: neo4j
+    networking.gke.io/v1beta1.FrontendConfig: neo4j
+    kubernetes.io/ingress.class: "gce"
+spec:
+  rules:
+  - host: {{ .Values.networking.browser.domain }}
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: {{ .Values.neo4j.neo4j.name }}
+            port:
+              number: 7474
+  - host:  {{ .Values.networking.bolt.domain }}
+    http:
+      paths:
+      - pathType: Prefix
+        path: /
+        backend:
+          service:
+            name: {{ .Values.neo4j.neo4j.name }}
+            port:
+              number: 7687
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: neo4j
+spec:
+  healthCheck:
+    checkIntervalSec: 15
+    timeoutSec: 15
+    healthyThreshold: 1
+    unhealthyThreshold: 2
+    type: HTTP
+    port: 7474

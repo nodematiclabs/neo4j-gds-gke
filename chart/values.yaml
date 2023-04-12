@@ -1,0 +1,46 @@
+neo4j:
+  neo4j:
+    name: standalone-neo4j
+    password: "CHANGE ME d1351a1a"
+  services:
+    default:
+      annotations:
+        cloud.google.com/backend-config: '{"default": "neo4j"}'
+  podSpec:
+    initContainers:
+    - name: get-plugins
+      image: nodematic/ubuntu-wget-unzip:22.04
+      command: ["/bin/bash", "-c"]
+      args:
+      - |
+        wget https://graphdatascience.ninja/neo4j-graph-data-science-2.3.1.zip -O /tmp/neo4j-graph-data-science-2.3.1.zip
+        unzip -o /tmp/neo4j-graph-data-science-2.3.1.zip -d /home/neo4j/plugins/
+      resources:
+        requests:
+          cpu: "1000m"
+          memory: "2Gi"
+        limits:
+          cpu: "1000m"
+          memory: "2Gi"
+      volumeMounts:
+      - name: neo4j-plugins
+        mountPath: /home/neo4j/plugins
+  volumes:
+    data:
+      mode: "defaultStorageClass"
+  additionalVolumes:
+  - name: neo4j-plugins
+    persistentVolumeClaim:
+      claimName: neo4j-plugins
+  additionalVolumeMounts:
+  - mountPath: "/var/lib/neo4j/plugins"
+    name: neo4j-plugins
+  config:
+    dbms.security.procedures.unrestricted: gds.*
+    dbms.security.procedures.allowlist: gds.*
+    server.bolt.tls_level: "DISABLED"
+networking:
+  browser:
+    domain: "neo4j-browser.example.com"
+  bolt:
+    domain: "neo4j-bolt.example.com"
